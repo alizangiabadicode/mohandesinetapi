@@ -24,6 +24,14 @@ def getLoginDetails():
     conn.close()
     return (loggedIn, firstName, noOfItems)
 
+@app.route("/categories")
+def categories():
+    with sqlite3.connect('database.db') as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT categoryId, name FROM categories')
+        categoryData = cur.fetchall()
+    return jsonify(categoryData), 200
+
 @app.route("/")
 def root():
     loggedIn, firstName, noOfItems = getLoginDetails()
@@ -98,7 +106,7 @@ def removeItem():
     print(msg)
     return redirect(url_for('root'))
 
-@app.route("/displayCategory")
+@app.route("/getProducts")
 def displayCategory():
         loggedIn, firstName, noOfItems = getLoginDetails()
         categoryId = request.args.get("categoryId")
@@ -109,7 +117,7 @@ def displayCategory():
         conn.close()
         categoryName = data[0][4]
         data = parse(data)
-        return render_template('displayCategory.html', data=data, loggedIn=loggedIn, firstName=firstName, noOfItems=noOfItems, categoryName=categoryName)
+        return jsonify( noOfItems=noOfItems, categoryName=categoryName, data=data), 200
 
 @app.route("/account/profile")
 def profileHome():
@@ -199,10 +207,9 @@ def login():
         password = request.form['password']
         if is_valid(email, password):
             session['email'] = email
-            return redirect(url_for('root'))
+            return jsonify(), 200
         else:
-            error = 'Invalid UserId / Password'
-            return render_template('login.html', error=error)
+            return jsonify(),500
 
 @app.route("/productDescription")
 def productDescription():
@@ -214,6 +221,35 @@ def productDescription():
         productData = cur.fetchone()
     conn.close()
     return render_template("productDescription.html", data=productData, loggedIn = loggedIn, firstName = firstName, noOfItems = noOfItems)
+
+
+@app.route("/productDetail")
+def productDetail():
+    loggedIn, firstName, noOfItems = getLoginDetails()
+    productId = request.args.get('productId')
+    with sqlite3.connect('database.db') as conn:
+        cur = conn.cursor()
+        cur.execute('SELECT productId, name, price, description, image, stock FROM products WHERE productId = ?', (productId, ))
+        productData = cur.fetchone()
+    conn.close()
+    return jsonify(data=productData, firstName = firstName, noOfItems = noOfItems), 200
+
+@app.route("/addProductToCard")
+def addProductToCard():
+    productId = int(request.args.get('productId'))
+    with sqlite3.connect('database.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT userId FROM users WHERE email = ?", (request.args.get('email'), ))
+        userId = cur.fetchone()[0]
+        try:
+            cur.execute("INSERT INTO kart (userId, productId) VALUES (?, ?)", (userId, productId))
+            conn.commit()
+            msg = "Added successfully"
+        except:
+            conn.rollback()
+            msg = "Error occured"
+    conn.close()
+    return jsonify(), 200
 
 @app.route("/addToCart")
 def addToCart():
@@ -252,6 +288,22 @@ def cart():
         totalPrice += row[2]
     return render_template("cart.html", products = products, totalPrice=totalPrice, loggedIn=loggedIn, firstName=firstName, noOfItems=noOfItems)
 
+
+@app.route("/getCardItems")
+def getCardItems():
+    loggedIn, firstName, noOfItems = getLoginDetails()
+    email = request.args.get('email')
+    with sqlite3.connect('database.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT userId FROM users WHERE email = ?", (email, ))
+        userId = cur.fetchone()[0]
+        cur.execute("SELECT products.productId, products.name, products.price, products.image FROM products, kart WHERE products.productId = kart.productId AND kart.userId = ?", (userId, ))
+        products = cur.fetchall()
+    totalPrice = 0
+    for row in products:
+        totalPrice += row[2]
+    return jsonify( products = products, totalPrice=totalPrice, noOfItems=noOfItems), 200
+
 @app.route("/removeFromCart")
 def removeFromCart():
     if 'email' not in session:
@@ -271,6 +323,24 @@ def removeFromCart():
             msg = "error occured"
     conn.close()
     return redirect(url_for('root'))
+
+@app.route("/removeFromCard")
+def removeFromCard():
+    email = request.args.get('email')
+    productId = int(request.args.get('productId'))
+    with sqlite3.connect('database.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT userId FROM users WHERE email = ?", (email, ))
+        userId = cur.fetchone()[0]
+        try:
+            cur.execute("DELETE FROM kart WHERE userId = ? AND productId = ?", (userId, productId))
+            conn.commit()
+            msg = "removed successfully"
+        except:
+            conn.rollback()
+            msg = "error occured"
+    conn.close()
+    return jsonify(), 200
 
 @app.route("/logout")
 def logout():
