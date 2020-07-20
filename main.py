@@ -366,17 +366,13 @@ def register():
         firstName = request.form['firstName']
         lastName = request.form['lastName']
         address1 = request.form['address1']
-        address2 = request.form['address2']
-        zipcode = request.form['zipcode']
         city = request.form['city']
-        state = request.form['state']
-        country = request.form['country']
         phone = request.form['phone']
 
         with sqlite3.connect('database.db') as con:
             try:
                 cur = con.cursor()
-                cur.execute('INSERT INTO users (password, email, firstName, lastName, address1, address2, zipcode, city, state, country, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (hashlib.md5(password.encode()).hexdigest(), email, firstName, lastName, address1, address2, zipcode, city, state, country, phone))
+                cur.execute('INSERT INTO users (password, email, firstName, lastName, address1, city, phone) VALUES (?, ?, ?, ?, ?, ?, ?)', (hashlib.md5(password.encode()).hexdigest(), email, firstName, lastName, address1, city, phone))
 
                 con.commit()
 
@@ -385,7 +381,7 @@ def register():
                 con.rollback()
                 msg = "Error occured"
         con.close()
-        return render_template("login.html", error=msg)
+        return jsonify(), 200
 
 @app.route("/registerationForm")
 def registrationForm():
