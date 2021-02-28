@@ -1,6 +1,7 @@
 from flask import *
 import sqlite3, hashlib, os
 from werkzeug.utils import secure_filename
+from flask import jsonify
 
 app = Flask(__name__)
 app.secret_key = 'random string'
@@ -207,9 +208,9 @@ def login():
         password = request.form['password']
         if is_valid(email, password):
             session['email'] = email
-            return jsonify(), 200
+            return jsonify(200)
         else:
-            return jsonify(),500
+            return jsonify(500)
 
 @app.route("/productDescription")
 def productDescription():
@@ -366,11 +367,11 @@ def register():
         firstName = request.form['firstName']
         lastName = request.form['lastName']
         address1 = request.form['address1']
-        address2 = request.form['address2']
-        zipcode = request.form['zipcode']
+        # address2 = request.form['address2']
+        # zipcode = request.form['zipcode']
         city = request.form['city']
-        state = request.form['state']
-        country = request.form['country']
+        # state = request.form['state']
+        # country = request.form['country']
         phone = request.form['phone']
 
         with sqlite3.connect('database.db') as con:
@@ -385,7 +386,8 @@ def register():
                 con.rollback()
                 msg = "Error occured"
         con.close()
-        return render_template("login.html", error=msg)
+        return jsonify(success=True)
+
 
 @app.route("/registerationForm")
 def registrationForm():
