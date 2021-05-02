@@ -274,10 +274,10 @@ def addToCart():
 
 @app.route("/cart")
 def cart():
-    if 'email' not in session:
-        return redirect(url_for('loginForm'))
-    loggedIn, firstName, noOfItems = getLoginDetails()
-    email = session['email']
+    # if 'email' not in session:
+    #     return redirect(url_for('loginForm'))
+    email = request.args.get('email')
+    # email = session['email']
     with sqlite3.connect('database.db') as conn:
         cur = conn.cursor()
         cur.execute("SELECT userId FROM users WHERE email = ?", (email, ))
@@ -287,7 +287,7 @@ def cart():
     totalPrice = 0
     for row in products:
         totalPrice += row[2]
-    return render_template("cart.html", products = products, totalPrice=totalPrice, loggedIn=loggedIn, firstName=firstName, noOfItems=noOfItems)
+    return jsonify(products = products, totalPrice=totalPrice), 200
 
 
 @app.route("/getCardItems")
